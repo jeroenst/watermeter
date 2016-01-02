@@ -9,7 +9,8 @@
 #include <stdint.h>
 #include <inttypes.h>
   
-#define DEVICE "/dev/ttyUSB2"
+// Device is a comport like /dev/ttyUSB1
+#define DEVICE "/dev/watermeter"
 #define METERFILE "/usr/domotica/watermeter/waterreading"
   
 uint64_t read_waterreading (const char* file_name)
@@ -56,7 +57,7 @@ int main(int argc, char** argv)
     int fd = open(DEVICE, omode, 0777);
     if(fd < 0)
     {
-        printf("open() failed: %d: %s\n", errno, strerror(errno));
+        printf("Error opening serial device: open() failed: %d: %s\n", errno, strerror(errno));
         return -1;
     }
   

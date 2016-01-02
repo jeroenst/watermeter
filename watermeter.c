@@ -13,22 +13,22 @@
 #define DEVICE "/dev/watermeter"
 #define METERFILE "/usr/domotica/watermeter/waterreading"
   
-uint64_t read_waterreading (const char* file_name)
+double read_waterreading (const char* file_name)
 {
-    uint64_t i = 0;
+    double i = 0;
     FILE* file = fopen (file_name, "r");
     if (file)
     {
-        if (!feof(file)) fscanf (file, "%" SCNd64, &i);      
+        if (!feof(file)) fscanf (file, "%lf", &i);      
         fclose (file);        
     }
     return i;
 }
 
-void write_waterreading (const char* file_name, uint64_t waterreading)
+void write_waterreading (const char* file_name, double waterreading)
 {
     FILE* file = fopen (file_name, "w");
-    fprintf (file, "%" SCNd64, waterreading);    
+    fprintf (file, "%.3lf", waterreading);    
     fclose (file);        
 }
 
@@ -49,7 +49,7 @@ int get_cts_state(int fd)
 int main(int argc, char** argv)
 {
     int omode = O_RDONLY;
-    uint64_t waterreading = 0;
+    double waterreading = 0;
     waterreading = read_waterreading (METERFILE);
     
   
@@ -61,15 +61,17 @@ int main(int argc, char** argv)
         return -1;
     }
   
-    printf("Device opened, CTS state: %d\n", get_cts_state(fd));
+    printf("Device opened: %s\n", DEVICE);
+    
   
     // detect DCD changes forever
     int i=0;
-    int ctsstate=0;
-            printf("Waterreading = %" SCNd64 "\r", waterreading);
-            fflush(stdout);
+    int ctsstate= get_cts_state(fd);
+    int pctsstate = 0;
     while(1)
     {
+        printf("Waterreading = %.3lf, ctsstate=%d\r", waterreading, ctsstate);
+        fflush(stdout);
         // block until line changes state
         if(ioctl(fd, TIOCMIWAIT, TIOCM_CTS) < 0)
         {
@@ -77,12 +79,11 @@ int main(int argc, char** argv)
             return -1;
         }
 
+        pctsstate = ctsstate;
         ctsstate = get_cts_state(fd);
-        if (ctsstate)
+        if ((ctsstate != pctsstate) && (ctsstate == 1))
         { 
-            waterreading++;
-            printf("Waterreading = %" SCNd64 "\r", waterreading);
-            fflush(stdout);
+            waterreading+=0.001;
             write_waterreading(METERFILE, waterreading);
         }
     }
